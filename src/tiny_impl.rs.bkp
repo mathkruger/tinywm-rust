@@ -1,0 +1,141 @@
+use std::ffi::CString;
+
+use x11::xlib::{
+    ButtonPress, ButtonPressMask, ButtonRelease, ButtonReleaseMask, CurrentTime, GrabModeAsync,
+    KeyPress, Mod1Mask, MotionNotify, PointerMotionMask, Window, XButtonEvent, XCheckTypedEvent,
+    XDefaultRootWindow, XEvent, XGrabButton, XGrabKey, XGrabPointer, XKeysymToKeycode,
+    XMoveResizeWindow, XNextEvent, XOpenDisplay, XRaiseWindow, XStringToKeysym, XUngrabPointer,
+    XWindowAttributes, XGetWindowAttributes, _XDisplay,
+};
+
+fn main() {
+    unsafe {
+        let dpy = XOpenDisplay(&0);
+        let root: Window;
+        let attr: *mut XWindowAttributes = 0 as *mut XWindowAttributes;
+        let ev: *mut XEvent = 0 as *mut XEvent;
+        let mut start: XButtonEvent = get_empty_button_ev();
+
+        root = XDefaultRootWindow(dpy);
+        let f1_key = match CString::new("F1") {
+            Ok(value) => value.as_ptr() as *const i8,
+            Err(_) => panic!("Could not create a cstring"),
+        };
+
+        XGrabKey(
+            dpy,
+            XKeysymToKeycode(dpy, XStringToKeysym(f1_key)) as i32,
+            Mod1Mask,
+            root,
+            1,
+            GrabModeAsync,
+            GrabModeAsync,
+        );
+
+        XGrabButton(
+            dpy,
+            1,
+            Mod1Mask,
+            root,
+            1,
+            ButtonPressMask.try_into().unwrap(),
+            GrabModeAsync,
+            GrabModeAsync,
+            0,
+            0,
+        );
+
+        XGrabButton(
+            dpy,
+            3,
+            Mod1Mask,
+            root,
+            1,
+            ButtonPressMask.try_into().unwrap(),
+            GrabModeAsync,
+            GrabModeAsync,
+            0,
+            0,
+        );
+
+        loop {
+            XNextEvent(dpy, ev);
+
+            let event = ev.as_ref().unwrap();
+            let event_type = event.get_type();
+
+            if event_type == KeyPress {
+                if event.key.subwindow != 0 {
+                    XRaiseWindow(dpy, event.key.subwindow);
+                }
+            } else if event_type == ButtonPress {
+                if event.button.subwindow != 0 {
+                    XGrabPointer(
+                        dpy,
+                        event.button.subwindow,
+                        1,
+                        PointerMotionMask as u32 | ButtonReleaseMask as u32,
+                        GrabModeAsync,
+                        GrabModeAsync,
+                        0,
+                        0,
+                        CurrentTime,
+                    );
+
+                    XGetWindowAttributes(dpy, event.button.subwindow, attr);
+
+                    start = event.button;
+                }
+            } else if event_type == MotionNotify {
+                let mut xdiff: i32;
+                let mut ydiff: i32;
+                let attributes = attr.as_ref().unwrap();
+
+                while XCheckTypedEvent(dpy, MotionNotify, ev) != 0 {
+                    xdiff = event.button.x_root - start.x_root;
+                    ydiff = event.button.y_root - start.y_root;
+
+                    XMoveResizeWindow(
+                        dpy,
+                        event.motion.window,
+                        attributes.x + if start.button == 1 { xdiff } else { 0 },
+                        attributes.y + if start.button == 1 { ydiff } else { 0 },
+                        max(1, attributes.width + if start.button == 3 { xdiff } else { 0 }),
+                        max(1, attributes.height + if start.button == 3 { ydiff } else { 0 }),
+                    );
+                }
+            } else if event_type == ButtonRelease {
+                XUngrabPointer(dpy, CurrentTime);
+            }
+        }
+    }
+}
+
+fn get_empty_button_ev() -> XButtonEvent {
+    XButtonEvent {
+        type_: 0,
+        serial: 0,
+        send_event: 0,
+        display: 0 as *mut _XDisplay,
+        window: 0,
+        root: 0,
+        subwindow: 0,
+        time: 0,
+        x: 0,
+        y: 0,
+        x_root: 0,
+        y_root: 0,
+        state: 0,
+        button: 0,
+        same_screen: 0
+    }
+
+}
+
+fn max(number1: i32, number2: i32) -> u32 {
+    if number1 > number2 {
+        return number1 as u32;
+    } else {
+        return number2 as u32;
+    }
+}
