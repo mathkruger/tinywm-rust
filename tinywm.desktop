@@ -2,7 +2,7 @@
 Version=1.0
 Name=Tiny WM
 Comment=Use this session to run penrose as your desktop environment
-Exec=$HOME/.tinywm-rust/tinywm-rust &> ~/.tinywm-rust/tinywm-rust.log
+Exec=/usr/bin/tinywm-rust/tinywm-rust &> ~/.tinywm-rust/tinywm-rust.log
 Icon=
 Type=Application
 DesktopNames=TinyWM
