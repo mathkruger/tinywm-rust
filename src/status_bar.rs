@@ -6,19 +6,19 @@ use crate::constants::{FONT, WHITE, BLACK, BAR_HEIGHT_PX, BLUE, GREY};
 pub fn build_status_bar() -> StatusBar<RustConn> {
     let style = TextStyle {
         font: FONT.to_string(),
-        point_size: 8,
+        point_size: 11,
         fg: WHITE.into(),
         bg: Some(BLACK.into()),
         padding: (2.0, 2.0),
     };
-    
     
     let bar = status_bar(
         BAR_HEIGHT_PX,
         &style, 
         BLUE, 
         GREY, 
-        Position::Bottom)
-    .unwrap();
+        Position::Top
+    ).unwrap();
+    
     bar
 }
